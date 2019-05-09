@@ -9,6 +9,9 @@ def diff(first, second):
 def cardsort(x):
     return getCardValue(x) + getCardSuitValue(x)
 
+def cardsortAceLow(x):
+    return getCardValue(x, acehigh=False) + getCardSuitValue(x)
+
 def scoresort(hand):
     return getCardsScore(hand)
 
@@ -40,13 +43,14 @@ def getCardsScore(cards):
         multiplier = 2
     return multiplier * score
 
-def getCardValue(card):
+def getCardValue(card, acehigh=True):
     val = card[:-1]
     val = val.lower()
     val = 11 if val == 'j' else val
     val = 12 if val == 'q' else val
     val = 13 if val == 'k' else val
-    val = 1 if val == 'a' else val
+    val = 14 if val == 'a' else val
+    val = 1 if val == 14 and not acehigh else val
     return int(val)
 
 def getCardSuitValue(card):
@@ -81,14 +85,23 @@ def isFlush(cards):
             return False;
     return True;
 
-def isStraight(cards):
+def isStraight(cards, acehigh=True):
+    if acehigh:
+        cards = sorted(cards, key=cardsort)
+    else:
+        cards = sorted(cards, key=cardsortAceLow)
+
     last = None
     for card in cards:
         if last == None:
-            last = getCardValue(card)
+            last = getCardValue(card, acehigh=False)
             continue;
-        if getCardValue(card) - 1 != last:
-            return False;
+        if getCardValue(card) - 1 != last and getCardValue(card, acehigh=False) - 1 != last:
+            # base case: 2nd attempt: acehigh = false
+            if not acehigh:
+                return False;
+            return isStraight(cards, acehigh=False)
+        # ace high can only happen when it is last. no need to account for it here
         last = getCardValue(card)
     return True;
 
@@ -128,7 +141,7 @@ def findStraight(hand, sort = False):
     if sort:
         hand = sorted(hand, key=cardsort)
     combis = combinations(hand, 5)
-    straights = [];
+    straights = []
     for cards in combis:
         if isStraight(cards):
             straights.append(list(cards))
@@ -317,6 +330,12 @@ def printCard(card):
     return (card[0:-1]).upper() + suit
 
 # -- TESTS --
+def  testGetCardValue():
+    # ace high
+    assert getCardValue('ah') == 14
+    # ace low
+    assert getCardValue('ah', acehigh=False) == 1
+testGetCardValue()
 
 def testSorting():
     tests = [
@@ -347,18 +366,22 @@ def testFlush():
     assert findFlush(hand, True) == flushes
 
 def testIsStraight():
-    cards = ['ah', '2h', '3h', '4h', '5h']
-    assert isStraight(cards) == True
+    cards = ['2h', '3h', 'ah', '4h', '5h']
+    assert isStraight(cards) == True, "Failed ace low test"
     cards = ['ah', '2h', '3h', '4h', '6h']
     assert isStraight(cards) == False
+    cards = ['10h', 'jh', 'ah', 'qh', 'kh']
+    assert isStraight(cards) == True, "Failed ace high test"
+testIsStraight()
 
 def testStraight():
     hand = ['ah', '2h', '3h', '4h', '5h', '6h', '8h', '8c', '8d', '8s', '9s', '9h', '9c']
     straights = [
-        ['ah', '2h', '3h', '4h', '5h'],
-        ['2h', '3h', '4h', '5h', '6h']
+        ['2h', '3h', '4h', '5h', '6h'],
+        ['2h', '3h', '4h', '5h', 'ah']
     ]
-    assert findStraight(hand, True) == straights
+    assert findStraight(hand, True) == straights, findStraight(hand, True)
+testStraight()
 
 def testPair():
     hand = ['as', 'ah', '3h', '4h', '5h', '6h', '7h', '8c', '9d', '10s', 'js', 'qh', 'kc']
@@ -416,21 +439,18 @@ def testArrange():
     for title, hand, expected in testCases:
         arrangeHand(hand)
 
-testSorting()
-testScoreSort()
-testIsPair()
-testIsFullHouse()
-testIsFlush()
-testFlush()
-testIsStraight()
-testStraight()
-testPair()
-testThreeOfAKind()
-testFourOfAKind()
-testFindBest();
+#testSorting()
+#testScoreSort()
+#testIsPair()
+#testIsFullHouse()
+#testIsFlush()
+#testFlush()
+#testPair()
+#testThreeOfAKind()
+#testFourOfAKind()
+#testFindBest();
 # testArrange();
 
-print "Testing suit: ♣c"
 
 
 # test input
@@ -438,15 +458,24 @@ print "Testing suit: ♣c"
 # 5h 6h 7h as  4h ac 8c 9d js ah ad  qs kh
 # straight, 2 pairs + kicker, 1 pair high card:
 # 3h 4s 5c 6d 7d 9d 9c 10s 10c kh kc 3d 2h
-cardsinput = raw_input("Enter your cards: ")
-cards = [x for x in cardsinput.split(' ') if x]
-top, middle, bottom = arrangeHand(cards)
-for card in top:
-    sys.stdout.write(printCard(card) + ' ')
-print ""
-for card in middle:
-    sys.stdout.write(printCard(card) + ' ')
-print ""
-for card in bottom:
-    sys.stdout.write(printCard(card) + ' ')
-print ""
+# all pairs
+# ah ad 3h 3c 5s 5c 7d 7s 9h 9c js jd qh
+# straight ace high
+# as 2d 3h 4s 5c jd qd 9d 9c 10s 10c kh kc
+# straight ace low
+# as 2d 3h 4s 5c jd qd 9d 9c 10s 10c 7h 3c
+def main():
+    cardsinput = raw_input("Enter your cards: ")
+    cards = [x for x in cardsinput.split(' ') if x]
+    top, middle, bottom = arrangeHand(cards)
+    for card in top:
+        sys.stdout.write(printCard(card) + ' ')
+    print ""
+    for card in middle:
+        sys.stdout.write(printCard(card) + ' ')
+    print ""
+    for card in bottom:
+        sys.stdout.write(printCard(card) + ' ')
+    print ""
+
+main()
