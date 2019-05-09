@@ -220,6 +220,11 @@ def findBest(hand, cardsneeded):
             straights = sorted(straights, key=scoresort)
             return straights[-1] #return highest
 
+        twopairs = findPairs(hand)
+        if len(twopairs) >= 2:
+            twopairs = sorted(twopairs, key=scoresort)
+            return twopairs[-1] + twopairs[-2] #return highest 2
+
     if cardsneeded == 4:
         fourOfAKinds = findFourOfAKind(hand)
         if fourOfAKinds != []:
@@ -230,7 +235,7 @@ def findBest(hand, cardsneeded):
         pairs = findPairs(hand)
         if len(pairs) >= 2:
             pairs = sorted(pairs, key=scoresort)
-            return pairs[-2::1] #return highest 2 (last 2 elements)
+            return pairs[-1] + pairs[-2] #return highest 2 (last 2 elements)
 
 
     if cardsneeded >= 3:
@@ -255,41 +260,44 @@ def arrangeHand(cards):
     print "Cards:", cards
     # get at most 5 cards
     back = findBest(cards, 5)
-    remainingcards = diff(cards, back)
     print "Bottom:", back
+    remainingcards = diff(cards, back)
     print "Remaining:", remainingcards
 
     # get at most 5 cards
     middle = findBest(remainingcards, 5)
-    remainingcards = diff(remainingcards, middle)
     print "Middle:", middle
+    remainingcards = diff(remainingcards, middle)
     print "Remaining:", remainingcards
 
     # get at most 3 cards
     front = findBest(remainingcards, 3)
-    remainingcards = diff(remainingcards, front)
     print "Top:", front
+    remainingcards = diff(remainingcards, front)
     print "Remaining:", remainingcards
 
     print ""
     print "Filling cards"
     print ""
 
-    ## arrange by best top to bottom
-    fillCards(front, remainingcards, 3)
-    remainingcards = diff(remainingcards, front)
-    print "Top:", front
-    print "Remaining:", remainingcards
+    if remainingcards:
+        ## arrange by best top to bottom
+        fillCards(front, remainingcards, 3)
+        remainingcards = diff(remainingcards, front)
+        print "Top:", front
+        print "Remaining:", remainingcards
 
-    fillCards(middle, remainingcards, 5)
-    remainingcards = diff(remainingcards, middle)
-    print "Middle:", middle
-    print "Remaining:", remainingcards
+    if remainingcards:
+        fillCards(middle, remainingcards, 5)
+        remainingcards = diff(remainingcards, middle)
+        print "Middle:", middle
+        print "Remaining:", remainingcards
 
-    fillCards(back, remainingcards, 5)
-    remainingcards = diff(remainingcards, back)
-    print "Bottom:", back
-    print "Remaining:", remainingcards
+    if remainingcards:
+        fillCards(back, remainingcards, 5)
+        remainingcards = diff(remainingcards, back)
+        print "Bottom:", back
+        print "Remaining:", remainingcards
 
     return front, middle, back
 
@@ -420,13 +428,16 @@ testPair()
 testThreeOfAKind()
 testFourOfAKind()
 testFindBest();
-testArrange();
+# testArrange();
 
 print "Testing suit: ♣c"
 
 
 # test input
-#   5h 6h 7h as  4h ac 8c 9d js ah ad  qs kh
+# 4 of a kind, flush, pair:
+# 5h 6h 7h as  4h ac 8c 9d js ah ad  qs kh
+# straight, 2 pairs + kicker, 1 pair high card:
+# 3h 4s 5c 6d 7d 9d 9c 10s 10c kh kc 3d 2h
 cardsinput = raw_input("Enter your cards: ")
 cards = [x for x in cardsinput.split(' ') if x]
 top, middle, bottom = arrangeHand(cards)
